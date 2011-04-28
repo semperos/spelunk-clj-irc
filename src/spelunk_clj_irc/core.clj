@@ -14,6 +14,8 @@
             [clojure.string :as string]
             [clojure.contrib.except :as except]
             [net.cgrand.enlive-html :as html]
+            [clj-time.format :as date]
+            [clj-time.core :as time]
             [spelunk-clj-irc.util :as util]
            )
   (:import [java.net URL]
@@ -33,6 +35,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(def *start-url* "http://clojure-log.n01se.net/date/2008-02-01.html")
 (def *last-person* (atom ""))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -101,31 +104,59 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn html-to-comments [html-data]
-  (let [[month day year] (util/grab-log-date html-data)]
+(defn html-to-comments [url html-data]
+  (let [[month day year] (util/log-date url)]
     (remove nil? (map #(node-to-comment year month day (:content %))
                       (html/select html-data [:#main :p])))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn url-to-comments [url]
-  (html-to-comments (html/html-resource url)))
+(defn nodes-to-csv [url nodes]
+  (let [comments (html-to-comments url nodes)]
+    (map #(toCSV %) comments)))
 
-(defn url-to-csv [url]
-  (map #(toCSV %) (url-to-comments url)))
-
-(defn url-to-csv-file [url]
-  (let [data (url-to-csv url)
-        destination (File. (string/replace (str url) ".html" ".csv"))]
-    (when-not (.exists destination)
+(defn nodes-to-csv-file [url nodes]
+  (let [csv-data (nodes-to-csv url nodes)
+        final-path (->> (util/url-parts url)
+                        second
+                        (re-find #"([^\.]+).html")
+                        second)
+        destination (-> final-path
+                        (str ".csv")
+                        io/as-file)]
+    (when-not (or (.exists destination) (empty? csv-data))
       (println url "   =>   " destination)
       (with-open [os (io/output-stream destination)]
         (.write os (.getBytes (str (getHeader (Comment. nil nil nil)) "\n")))
-        (doseq [row data]
+        (doseq [row csv-data]
           (.write os (.getBytes (str row "\n"))))))))
 
-(defn dir-to-csv [dir]
-  (let [dir_url (File. dir)]
-    (doseq [x (filter #(re-matches #"^.+\.html$" %) (remove nil? (.list dir_url)))]
-      (url-to-csv-file (File. dir x)))))
+(defn fetch-url
+  "Return a set of Enlive nodes from the source at url"
+  [url]
+  (try (html/html-resource (java.net.URL. url))
+       (catch java.io.FileNotFoundException e
+         {})))
+
+(defn scrape-all-logs
+  "Scrape all Clojure IRC logs on the n01se.net. Do not re-scrape a page for which we already have generated a CSV file."
+  []
+  (doseq [current-url (iterate util/calc-next-day-url *start-url*)
+          :while (not= current-url (util/url-for-date (time/now)))]
+    (let [final-path (->> (util/url-parts current-url)
+                        second
+                        (re-find #"([^\.]+).html")
+                        second)
+          destination (-> final-path
+                        (str ".csv")
+                        io/as-file)]
+      (when-not (.exists destination)
+        (let [current-nodes (fetch-url current-url)
+              current-title (->> [:head :title]
+                                 (html/select current-nodes)
+                                 first
+                                 :content
+                                 first)]
+          (println (str "URL: " current-url))
+          (nodes-to-csv-file current-url current-nodes))))))
 

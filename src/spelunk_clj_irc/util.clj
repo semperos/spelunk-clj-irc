@@ -23,10 +23,12 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn grab-log-date [data]
-  {:post [(seq %)]}
-  (let [raw-title (first (:content (first (html/select data [:head :title]))))]
-    (rest (re-matches _date-pattern raw-title))))
+(declare url-parts)
+(defn log-date
+  "Given url, parse out log date"
+  [url]
+  (let [final-path (second (url-parts url))]
+    (string/split (second (re-find #"([^\.]+).html" final-path)) #"-")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -54,10 +56,14 @@
                              "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"]
                             (map str (range 13))))
 (defn irc-to-joda-time [year month day hhmma-z]
-  (let [[hour minute second] (map normalize-time-component
-                                  (rest (first (re-seq _time-pattern hhmma-z))))]
-    (apply time/date-time
-           (map #(Integer/parseInt %) [year (_shameful-hack month) day hour minute second]))))
+  (let [[hour minute second] (map #(Integer/parseInt %)
+                                  (map normalize-time-component
+                                       (rest (first (re-seq _time-pattern hhmma-z)))))
+        [year month day] (map #(Integer/parseInt %) [year month day])]
+    (try (apply time/date-time
+                [year (_shameful-hack month) day hour minute second])
+         (catch NullPointerException e
+           ""))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -70,3 +76,31 @@
                           2 (string/join " " strs)
                           1 (first strs)
                           0 nil))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn url-parts
+  "Return the body (everything up to the final path) and the tail (the final path) of a url, e.g. http://example.com/foo/bar would return [\"http://example.com/foo\", \"bar\"]"
+  [path]
+  (let [matches (re-find #"(.*?)/([^/]*)$" path)
+        body (nth matches 1)
+        tail (nth matches 2)]
+    [body tail]))
+
+(defn url-for-date
+  "Generate a string URL for a log page on n01se.net given a particular date"
+  [dt]
+  (str "http://clojure-log.n01se.net/date/" (date/unparse (date/formatters :year-month-day) dt) ".html"))
+
+(defn calc-next-day-url
+  "'Increment' a url to get the next day's url"
+  [url]
+  (let [fmt (date/formatters :year-month-day)
+        [body tail] (url-parts url)
+        this-url-date (->> (re-find #"([^\.]+).html" tail)
+                           second
+                           (date/parse fmt))
+        next-date-str (->> (time/days 1)
+                           (time/plus this-url-date)
+                           (date/unparse fmt))]
+    (str body "/" next-date-str ".html")))
