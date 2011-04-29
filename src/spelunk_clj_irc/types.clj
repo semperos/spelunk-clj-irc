@@ -14,3 +14,5 @@
   (getHeader [_])
   (toCSV [_]))
 
+(defprotocol ISQLSerializable
+  (toSQL [_]))
