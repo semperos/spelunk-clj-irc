@@ -11,7 +11,31 @@ The main function of interest is `scrape-logs` located in the `spelunk-clj-irc.c
 
 You can optionally pass a start and end date (as instances of Joda DateTime) to limit the scope of the scrape.
 
-At this time, the only other persistence option is `:mysql`, which requires a little configuration ahead-of-time. Look at the `src/spelunk_clj_irc/core_mysql.clj` file for details and for some helpful functions to get you started.
+### CSV
+
+If you use the code above `(scrape-logs :csv)`, all log files will be scraped and saved as individual CSV files into a `cache` directory, one per day of logs.
+
+### MySQL
+
+Use the `:mysql` option as follows:
+
+    (use 'spelunk-clj-irc.core)
+    (scrape-logs :mysql)
+
+In order to use the MySQL method, you must have already created a MySQL database. Alter the configuration options in the `src/spelunk_clj_irc/core_mysql.clj` file to match your local configuration (database name, user, password, etc.). Once the database has been created, you can run the above function to have all logs written to the database. Each entry in the logs (a person saying one thing at a particular time) is saved as a row in the database.
+
+See the `core_mysql.clj` file for some utility functions for managing the database. You can use them to clear out portions of the logs table, and then run `(scrape-logs :mysql start-date)` to do incremental scrapes based on the date (at this time, the granularity is by day).
+
+### MongoDB
+
+Use the `:mongodb` option as follows:
+
+    (use 'spelunk-clj-irc.core)
+    (use 'somnium.congomongo)
+    (mongo! :db "clj_irc")
+    (scrape-logs :mongodb)
+
+This first prepares a MongoDB database called `clj_irc` and then does a full scrape of the logs. Like the MySQL option, this will save each record of the log as a separate document in a collection called `logs`. You can use any functions provided by the `congomongo` library to manipulate the data from Clojure, or use the MongoDB shell that comes with MongoDB.
 
 ## License
 
