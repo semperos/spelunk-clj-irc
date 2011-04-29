@@ -24,14 +24,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defrecord Comment [#^String who, #^String what, #^org.joda.time.DateTime when]
-  ICSVSerializable
-  (getHeader [_] "\"who\",\"what\",\"when\"")
-  (toCSV [self]
-         (string/join "," (map #(str \"
-                                     (string/escape (str (% self)) { \" "\"\"" })
-                                     \")
-                               [:who :what :when]))))
+(defrecord Comment [#^String who, #^String what, #^org.joda.time.DateTime when])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -111,26 +104,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn nodes-to-csv [url nodes]
-  (let [comments (html-to-comments url nodes)]
-    (map #(toCSV %) comments)))
-
-(defn nodes-to-csv-file [url nodes]
-  (let [csv-data (nodes-to-csv url nodes)
-        final-path (->> (util/url-parts url)
-                        second
-                        (re-find #"([^\.]+).html")
-                        second)
-        destination (-> final-path
-                        (str ".csv")
-                        io/as-file)]
-    (when-not (or (.exists destination) (empty? csv-data))
-      (println url "   =>   " destination)
-      (with-open [os (io/output-stream destination)]
-        (.write os (.getBytes (str (getHeader (Comment. nil nil nil)) "\n")))
-        (doseq [row csv-data]
-          (.write os (.getBytes (str row "\n"))))))))
-
 (defn fetch-url
   "Return a set of Enlive nodes from the source at url"
   [url]
@@ -138,18 +111,27 @@
        (catch java.io.FileNotFoundException e
          {})))
 
+(load "core_csv")
+(load "core_sql")
+
+(defn persist-nodes
+  "Returns map of functions for different kinds of persistence, e.g. csv, sql, etc."
+  [persistence-type]
+  (condp = persistence-type
+      :csv nodes-to-csv-file
+      :sql nodes-to-sql-file))
+
 (defn scrape-all-logs
   "Scrape all Clojure IRC logs on the n01se.net. Do not re-scrape a page for which we already have generated a CSV file."
-  []
+  [persistence-type]
   (doseq [current-url (iterate util/calc-next-day-url *start-url*)
           :while (not= current-url (util/url-for-date (time/now)))]
     (let [final-path (->> (util/url-parts current-url)
-                        second
-                        (re-find #"([^\.]+).html")
-                        second)
-          destination (-> final-path
-                        (str ".csv")
-                        io/as-file)]
+                          second
+                          (re-find #"([^\.]+).html")
+                          second)
+          destination (-> (str "cache/" final-path ".csv")
+                          io/as-file)]
       (when-not (.exists destination)
         (let [current-nodes (fetch-url current-url)
               current-title (->> [:head :title]
@@ -158,5 +140,5 @@
                                  :content
                                  first)]
           (println (str "URL: " current-url))
-          (nodes-to-csv-file current-url current-nodes))))))
+          ((persist-nodes persistence-type) destination current-url current-nodes))))))
 
