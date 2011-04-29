@@ -4,8 +4,12 @@
 
 ## Usage
 
-Very limited at the moment, tested only with local copies of the html files
-(spelunk-clj-irc.core/dir-to-csv "/path/to/local/html_files/"))
+The main function of interest is `scrape-all-logs` located in the `spelunk-clj-irc.core` namespace. Pass in the way in which you want the logs saved, and it will scrape all of the logs hosted on the site, starting with February 1st, 2008.
+
+    (use 'spelunk-clj-irc.core)
+    (scrape-all-logs :csv)
+
+At this point, the only type of persistence that is supported is CSV files, one per day of logs. Next in line are plain SQL files and then hopefully a MongoDB persistence option.
 
 ## License
 
