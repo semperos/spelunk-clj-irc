@@ -12,6 +12,7 @@
                :password ""})
 
 (defn mysql-create-logs-table
+  "CREATE TABLE the logs table"
   []
   (sql/with-connection mysql-db
     (sql/create-table mysql-log-tbl
@@ -20,7 +21,14 @@
                       [:what :text]
                       [:when_dt :datetime])))
 
+(defn mysql-clean-logs-table
+  "TRUNCATE the logs table"
+  []
+  (sql/with-connection mysql-db
+    (sql/do-commands (str "TRUNCATE " (name mysql-log-tbl)))))
+
 (defn mysql-drop-logs-table
+  "DROP the logs table"
   []
   (sql/with-connection mysql-db
     (try
