@@ -9,7 +9,7 @@ The main function of interest is `scrape-all-logs` located in the `spelunk-clj-i
     (use 'spelunk-clj-irc.core)
     (scrape-all-logs :csv)
 
-At this point, the only type of persistence that is supported is CSV files, one per day of logs. Next in line are plain SQL files and then hopefully a MongoDB persistence option.
+At this time, the only other option is `:mysql`, which requires a little configuration ahead-of-time. Look at the `src/spelunk_clj_irc/core_mysql.clj` file for details and for some helpful functions to get you started.
 
 ## License
 
