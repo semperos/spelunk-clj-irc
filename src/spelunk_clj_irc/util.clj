@@ -20,6 +20,7 @@
      #"^.+- (\p{Alpha}{3})\p{Space}(\p{Digit}{2})\p{Space}+(\p{Digit}{4})$")
 
 (def _formatter (date/formatter "yyyy MMM DD HH mm ss"))
+(def mysql-dt-formatter (date/formatter "yyyy-MM-dd HH:mm:ss"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
