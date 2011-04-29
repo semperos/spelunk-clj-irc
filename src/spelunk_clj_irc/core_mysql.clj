@@ -3,7 +3,7 @@
 (def mysql-host "localhost")
 (def mysql-port 3306)
 (def mysql-db-name "clj_irc")
-(def mysql-log-tbl :logs)
+(def mysql-tbl :logs)
 
 (def mysql-db {:classname "com.mysql.jdbc.Driver"
                :subprotocol "mysql"
@@ -15,7 +15,7 @@
   "CREATE TABLE the logs table"
   []
   (sql/with-connection mysql-db
-    (sql/create-table mysql-log-tbl
+    (sql/create-table mysql-tbl
                       [:id :integer "PRIMARY KEY" "AUTO_INCREMENT"]
                       [:who "varchar(255)"]
                       [:what :text]
@@ -25,7 +25,7 @@
   "TRUNCATE the logs table"
   []
   (sql/with-connection mysql-db
-    (sql/do-commands (str "TRUNCATE " (name mysql-log-tbl)))))
+    (sql/do-commands (str "TRUNCATE " (name mysql-tbl)))))
 
 (defn mysql-drop-logs-table
   "DROP the logs table"
@@ -33,10 +33,10 @@
   (sql/with-connection mysql-db
     (try
       (do
-        (sql/drop-table mysql-log-tbl))
+        (sql/drop-table mysql-tbl))
       (catch Exception _))))
 
-(def insert-query (str "INSERT INTO " (name mysql-log-tbl) " (who, what, when_dt) "
+(def insert-query (str "INSERT INTO " (name mysql-tbl) " (who, what, when_dt) "
                        "VALUES (?, ?, ?)"))
 
 (defn nodes-to-mysql-db
