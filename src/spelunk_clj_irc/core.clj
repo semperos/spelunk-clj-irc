@@ -132,13 +132,14 @@
 
 ;; :while (not= current-url (util/url-for-date (time/now)))
 
-(defn scrape-all-logs
-  "Scrape all Clojure IRC logs on the n01se.net. Do not re-scrape a page for which we already have generated a CSV file."
-  ([persistence-type] (scrape-all-logs persistence-type (time/date-time 2008 2 1)))
-  ([persistence-type start-date]
+(defn scrape-logs
+  "Scrape logs from n01se.net. The `persistence-type` dictates how the data is saved locally. An optional `start-date` (inclusive) and `end-date` (exclusive) may be provided to limit what is scraped."
+  ([persistence-type] (scrape-all-logs persistence-type (time/date-time 2008 2 1) (time/now)))
+  ([persistence-type start-date] (scrape-all-logs persistence-type start-date (time/now)))
+  ([persistence-type start-date end-date]
      (let [start-url (util/url-for-date start-date)]
        (doseq [current-url (iterate util/calc-next-day-url start-url)
-               :while (not= current-url (util/url-for-date (time/now)))]
+               :while (not= current-url (util/url-for-date end-date))]
          (if (= persistence-type :csv)
            (let [final-path (->> (util/url-parts current-url)
                                  second
