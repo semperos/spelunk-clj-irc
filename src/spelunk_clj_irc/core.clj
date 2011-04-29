@@ -17,6 +17,7 @@
             [net.cgrand.enlive-html :as html]
             [clj-time.format :as date]
             [clj-time.core :as time]
+            [somnium.congomongo :as mongo]
             [spelunk-clj-irc.util :as util]
            )
   (:import [java.net URL]
@@ -113,6 +114,7 @@
          {})))
 
 (load "core_csv")
+(load "core_mongodb")
 (load "core_mysql")
 
 (defn persist-nodes
@@ -120,11 +122,12 @@
   [persistence-type]
   (condp = persistence-type
       :csv nodes-to-csv-file
+      :mongodb nodes-to-mongodb
       :mysql nodes-to-mysql-db))
 
 ;; :while (not= current-url (util/url-for-date (time/now)))
 
-(defn scrape-log
+(defn- scrape-log
   [persistence-type destination current-url]
   (let [current-nodes (fetch-url current-url)]
     (println (str "URL: " current-url))
@@ -138,8 +141,8 @@
   ([persistence-type start-date] (scrape-logs persistence-type start-date (time/now)))
   ([persistence-type start-date end-date]
      (let [start-url (util/url-for-date start-date)]
-       (doseq [current-url (iterate util/calc-next-day-url start-url)
-               :while (not= current-url (util/url-for-date end-date))]
+       (doseq [current-url (take 2 (iterate util/calc-next-day-url start-url))
+               ]
          (if (= persistence-type :csv)
            (let [final-path (->> (util/url-parts current-url)
                                  second
