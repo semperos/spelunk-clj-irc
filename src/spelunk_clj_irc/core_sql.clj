@@ -1,17 +1,43 @@
 (in-ns 'spelunk-clj-irc.core)
 
-(defn escape-sql-q
-  "Escape single quotes for SQL input"
-  [s]
-  (string/replace s #"'" "''"))
+(def mysql-host "localhost")
+(def mysql-port 3306)
+(def mysql-db-name "clj_irc")
+(def mysql-log-tbl :logs)
 
-(extend-type Comment
-  ISQLSerializable
-  (toSQL [self]))
+(def mysql-db {:classname "com.mysql.jdbc.Driver"
+               :subprotocol "mysql"
+               :subname (str "//" mysql-host ":" mysql-port "/" mysql-db-name)
+               :user "root"
+               :password ""})
 
-(defn nodes-to-sql
-  [url nodes]
-  (let [comments (html-to-comments url nodes)]
-    (map #(toSQL %) comments)))
+(defn mysql-create-logs-table
+  []
+  (sql/with-connection mysql-db
+    (sql/create-table mysql-log-tbl
+                      [:id :integer "PRIMARY KEY" "AUTO_INCREMENT"]
+                      [:who "varchar(255)"]
+                      [:what :text]
+                      [:when_dt :datetime])))
 
-(defn nodes-to-sql-file)
+(defn mysql-drop-logs-table
+  []
+  (sql/with-connection mysql-db
+    (try
+      (do
+        (sql/drop-table mysql-log-tbl))
+      (catch Exception _))))
+
+(def insert-query (str "INSERT INTO " (name mysql-log-tbl) " (who, what, when_dt) "
+                       "VALUES (?, ?, ?)"))
+
+(defn nodes-to-mysql-db
+  [_ url nodes]
+  (sql/with-connection mysql-db
+    (let [comments (html-to-comments url nodes)]
+      (doseq [comment comments]
+        (sql/do-prepared insert-query
+                         [(:who comment)
+                          (:what comment)
+                          (date/unparse util/mysql-dt-formatter (:when comment))])))))
+
