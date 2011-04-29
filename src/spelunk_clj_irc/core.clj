@@ -29,7 +29,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def *start-url* "http://clojure-log.n01se.net/date/2008-02-01.html")
+(def *start-url* )
 (def *last-person* (atom ""))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -113,7 +113,7 @@
          {})))
 
 (load "core_csv")
-(load "core_sql")
+(load "core_mysql")
 
 (defn persist-nodes
   "Returns map of functions for different kinds of persistence, e.g. csv, sql, etc."
@@ -134,15 +134,18 @@
 
 (defn scrape-all-logs
   "Scrape all Clojure IRC logs on the n01se.net. Do not re-scrape a page for which we already have generated a CSV file."
-  [persistence-type]
-  (doseq [current-url (take 2 (iterate util/calc-next-day-url *start-url*))]
-    (if (= persistence-type :csv)
-      (let [final-path (->> (util/url-parts current-url)
-                            second
-                            (re-find #"([^\.]+).html")
-                            second)
-            destination (-> (str "cache/" final-path ".csv")
-                           io/as-file)]
-        (when-not (.exists destination)
-          (scrape-log persistence-type destination current-url)))
-      (scrape-log persistence-type nil current-url))))
+  ([persistence-type] (scrape-all-logs persistence-type (time/date-time 2008 2 1)))
+  ([persistence-type start-date]
+     (let [start-url (util/url-for-date start-date)]
+       (doseq [current-url (iterate util/calc-next-day-url start-url)
+               :while (not= current-url (util/url-for-date (time/now)))]
+         (if (= persistence-type :csv)
+           (let [final-path (->> (util/url-parts current-url)
+                                 second
+                                 (re-find #"([^\.]+).html")
+                                 second)
+                 destination (-> (str "cache/" final-path ".csv")
+                                 io/as-file)]
+             (when-not (.exists destination)
+               (scrape-log persistence-type destination current-url)))
+           (scrape-log persistence-type nil current-url))))))
