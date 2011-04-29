@@ -27,6 +27,24 @@
   (sql/with-connection mysql-db
     (sql/do-commands (str "TRUNCATE " (name mysql-tbl)))))
 
+(defn mysql-select-id-by-date
+  "Selects first record by date `dt`"
+  [dt]
+  (sql/with-connection mysql-db
+    (sql/with-query-results rs
+      [(str "SELECT id FROM " (name mysql-tbl) " WHERE "
+            "YEAR(when_dt)  = '" (time/year dt) "' AND "
+            "MONTH(when_dt) = '" (time/month dt) "' AND "
+            "DAY(when_dt)   = '" (time/day dt) "' LIMIT 1")]
+      (:id (first rs)))))
+
+(defn mysql-clean-logs-by-date
+  "Clean log records that have a date/time greater than or equal to the date `dt`"
+  [dt]
+  (let [start-id (mysql-select-id-by-date dt)]
+   (sql/with-connection mysql-db
+     (sql/delete-rows mysql-tbl ["id>=?" start-id]))))
+
 (defn mysql-drop-logs-table
   "DROP the logs table"
   []
