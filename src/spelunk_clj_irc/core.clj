@@ -105,7 +105,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn html-to-comments [url html-data]
-  (let [[month day year] (util/log-date url)]
+  (let [[year month day] (util/grab-log-date url)]
     (remove nil? (map #(node-to-comment year month day (:content %))
                       (html/select html-data [:#main :p])))))
 

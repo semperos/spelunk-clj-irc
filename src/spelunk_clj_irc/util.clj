@@ -24,7 +24,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (declare url-parts)
-(defn log-date
+(defn grab-log-date
   "Given url, parse out log date"
   [url]
   (let [final-path (second (url-parts url))]
@@ -51,19 +51,11 @@
 ;; um, what? (date/parse (date/formatter "yyyy MMM DD") "2008 Mar 08")
 ;; #<DateTime 2008-01-08T00:00:00.000Z>
 ;; after identifying that problem, get rid of this abomination:
-(def _shameful-hack (zipmap ["alas, the shame"
-                             "Jan" "Feb" "Mar" "Apr" "May" "Jun"
-                             "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"]
-                            (map str (range 13))))
 (defn irc-to-joda-time [year month day hhmma-z]
-  (let [[hour minute second] (map #(Integer/parseInt %)
-                                  (map normalize-time-component
-                                       (rest (first (re-seq _time-pattern hhmma-z)))))
-        [year month day] (map #(Integer/parseInt %) [year month day])]
-    (try (apply time/date-time
-                [year (_shameful-hack month) day hour minute second])
-         (catch NullPointerException e
-           ""))))
+  (let [[hour minute second] (map normalize-time-component
+                                  (rest (first (re-seq _time-pattern hhmma-z))))]
+    (apply time/date-time
+           (map #(Integer/parseInt %) [year month day hour minute second]))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
