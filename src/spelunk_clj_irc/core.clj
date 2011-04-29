@@ -13,6 +13,7 @@
             [clojure.pprint :as pp]
             [clojure.string :as string]
             [clojure.contrib.except :as except]
+            [clojure.contrib.sql :as sql]
             [net.cgrand.enlive-html :as html]
             [clj-time.format :as date]
             [clj-time.core :as time]
@@ -119,26 +120,29 @@
   [persistence-type]
   (condp = persistence-type
       :csv nodes-to-csv-file
-      :sql nodes-to-sql-file))
+      :mysql nodes-to-mysql-db))
+
+;; :while (not= current-url (util/url-for-date (time/now)))
+
+(defn scrape-log
+  [persistence-type destination current-url]
+  (let [current-nodes (fetch-url current-url)]
+    (println (str "URL: " current-url))
+    ((persist-nodes persistence-type) destination current-url current-nodes)))
+
+;; :while (not= current-url (util/url-for-date (time/now)))
 
 (defn scrape-all-logs
   "Scrape all Clojure IRC logs on the n01se.net. Do not re-scrape a page for which we already have generated a CSV file."
   [persistence-type]
-  (doseq [current-url (iterate util/calc-next-day-url *start-url*)
-          :while (not= current-url (util/url-for-date (time/now)))]
-    (let [final-path (->> (util/url-parts current-url)
-                          second
-                          (re-find #"([^\.]+).html")
-                          second)
-          destination (-> (str "cache/" final-path ".csv")
-                          io/as-file)]
-      (when-not (.exists destination)
-        (let [current-nodes (fetch-url current-url)
-              current-title (->> [:head :title]
-                                 (html/select current-nodes)
-                                 first
-                                 :content
-                                 first)]
-          (println (str "URL: " current-url))
-          ((persist-nodes persistence-type) destination current-url current-nodes))))))
-
+  (doseq [current-url (take 2 (iterate util/calc-next-day-url *start-url*))]
+    (if (= persistence-type :csv)
+      (let [final-path (->> (util/url-parts current-url)
+                            second
+                            (re-find #"([^\.]+).html")
+                            second)
+            destination (-> (str "cache/" final-path ".csv")
+                           io/as-file)]
+        (when-not (.exists destination)
+          (scrape-log persistence-type destination current-url)))
+      (scrape-log persistence-type nil current-url))))
