@@ -134,8 +134,8 @@
 
 (defn scrape-logs
   "Scrape logs from n01se.net. The `persistence-type` dictates how the data is saved locally. An optional `start-date` (inclusive) and `end-date` (exclusive) may be provided to limit what is scraped."
-  ([persistence-type] (scrape-all-logs persistence-type (time/date-time 2008 2 1) (time/now)))
-  ([persistence-type start-date] (scrape-all-logs persistence-type start-date (time/now)))
+  ([persistence-type] (scrape-logs persistence-type (time/date-time 2008 2 1) (time/now)))
+  ([persistence-type start-date] (scrape-logs persistence-type start-date (time/now)))
   ([persistence-type start-date end-date]
      (let [start-url (util/url-for-date start-date)]
        (doseq [current-url (iterate util/calc-next-day-url start-url)
