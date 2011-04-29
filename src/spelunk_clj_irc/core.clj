@@ -141,8 +141,8 @@
   ([persistence-type start-date] (scrape-logs persistence-type start-date (time/now)))
   ([persistence-type start-date end-date]
      (let [start-url (util/url-for-date start-date)]
-       (doseq [current-url (take 2 (iterate util/calc-next-day-url start-url))
-               ]
+       (doseq [current-url (iterate util/calc-next-day-url start-url)
+               :while (not= current-url (util/url-for-date (time/now)))]
          (if (= persistence-type :csv)
            (let [final-path (->> (util/url-parts current-url)
                                  second
