@@ -4,12 +4,14 @@
 
 ## Usage
 
-The main function of interest is `scrape-all-logs` located in the `spelunk-clj-irc.core` namespace. Pass in the way in which you want the logs saved, and it will scrape all of the logs hosted on the site, starting with February 1st, 2008.
+The main function of interest is `scrape-logs` located in the `spelunk-clj-irc.core` namespace. Pass in the way in which you want the logs saved, and it will scrape all of the logs hosted on the site, starting with February 1st, 2008.
 
     (use 'spelunk-clj-irc.core)
-    (scrape-all-logs :csv)
+    (scrape-logs :csv)
 
-At this time, the only other option is `:mysql`, which requires a little configuration ahead-of-time. Look at the `src/spelunk_clj_irc/core_mysql.clj` file for details and for some helpful functions to get you started.
+You can optionally pass a start and end date (as instances of Joda DateTime) to limit the scope of the scrape.
+
+At this time, the only other persistence option is `:mysql`, which requires a little configuration ahead-of-time. Look at the `src/spelunk_clj_irc/core_mysql.clj` file for details and for some helpful functions to get you started.
 
 ## License
 
