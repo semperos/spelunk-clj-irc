@@ -4,5 +4,6 @@
                  [org.clojure/clojure-contrib "1.2.0"]
                  [enlive "1.0.0"]
                  [clj-time "0.3.0"]
-                 [mysql/mysql-connector-java "5.1.16"]]
+                 [mysql/mysql-connector-java "5.1.16"]
+                 [congomongo "0.1.3-SNAPSHOT"]]
   :dev-dependencies [[swank-clojure "1.4.0-SNAPSHOT"]])
