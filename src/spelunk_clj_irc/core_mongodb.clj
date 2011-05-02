@@ -7,7 +7,7 @@
   (let [comments (html-to-comments url nodes)]
     (doseq [comment comments]
       (mongo/insert! mongodb-coll
-                     (assoc comment :when (.toDate (:when comment)))))))
+                     (into {} (assoc comment :when (.toDate (:when comment))))))))
 
 (comment
 
