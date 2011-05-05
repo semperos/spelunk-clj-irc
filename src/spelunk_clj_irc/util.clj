@@ -9,6 +9,7 @@
 ;   Source of IRC logs: http://clojure-log.n01se.net/
 
 (ns spelunk-clj-irc.util
+  (:refer-clojure :exclude [memoize])
   (:require [clj-time.format :as date]
             [clj-time.core :as time]
             [clojure.string :as string]
@@ -97,3 +98,73 @@
                            (time/plus this-url-date)
                            (date/unparse fmt))]
     (str body "/" next-date-str ".html")))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Thanks Meikel Brandmeyer
+(declare naive-strategy)
+
+(defn memoize
+  "Returns a memoized version of a referentially transparent function.
+  The memoized version of the function keeps a cache of the mapping from
+  arguments to results and, when calls with the same arguments are repeated
+  often, has higher performance at the expense of higher memory use.
+
+  Optionally takes a cache strategy. The strategy is provided as a map
+  containing the following keys. All keys are mandatory!
+
+    - :init   the initial value for the cache and strategy state
+    - :cache  access function to access the cache
+    - :lookup determines whether a value is in the cache or not
+    - :hit    a function called with the cache state and the argument
+                list in case of a cache hit
+    - :miss   a function called with the cache state, the argument list
+                and the computation result in case of a cache miss
+
+  The default strategy is the naive safe-all strategy."
+  ([f] (memoize f naive-strategy))
+  ([f strategy]
+   (let [{:keys [init cache lookup hit miss]} strategy
+         cache-state (atom init)
+         hit-or-miss (fn [state args]
+                       (if (lookup state args)
+                         (hit state args)
+                         (miss state args (delay (apply f args)))))]
+     (fn [& args]
+       (let [cs (swap! cache-state hit-or-miss args)]
+         (-> cs cache (get args) deref))))))
+
+(def #^{:doc "The naive safe-all cache strategy for memoize."}
+  naive-strategy
+  {:init   {}
+   :cache  identity
+   :lookup contains?
+   :hit    (fn [state _] state)
+   :miss   assoc})
+
+(defn ttl-cache-strategy
+  "Implements a time-to-live cache strategy. Upon access to the cache
+  all expired items will be removed. The time to live is defined by
+  the given expiry time span. Items will only be removed on function
+  call. No background activity is done."
+  [ttl]
+  (let [dissoc-dead (fn [state now]
+                      (let [ks (map key (filter #(> (- now (val %)) ttl)
+                                                (:ttl state)))
+                            dissoc-ks #(apply dissoc % ks)]
+                        (-> state
+                          (update-in [:ttl]   dissoc-ks)
+                          (update-in [:cache] dissoc-ks))))]
+    {:init   {:ttl {} :cache {}}
+     :cache  :cache
+     :lookup (fn [state args]
+               (when-let [t (get (:ttl state) args)]
+                 (< (- (System/currentTimeMillis) t) ttl)))
+     :hit    (fn [state args]
+               (dissoc-dead state (System/currentTimeMillis)))
+     :miss   (fn [state args result]
+               (let [now (System/currentTimeMillis)]
+                 (-> state
+                   (dissoc-dead now)
+                   (assoc-in  [:ttl args] now)
+                   (assoc-in  [:cache args] result))))}))
