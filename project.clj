@@ -5,7 +5,7 @@
                  [enlive "1.0.0"]
                  [clj-time "0.3.0"]
                  [mysql/mysql-connector-java "5.1.16"]
-                 [congomongo "0.1.3-SNAPSHOT"]
-                 [incanter "1.2.3"]
-                 [incanter/incanter-mongodb "1.2.3"]]
+                 [org.mongodb/mongo-java-driver "2.5"]
+                 [congomongo "0.1.4-SNAPSHOT"] ; download and compile manually
+                 [incanter/incanter-core "1.2.3"]]
   :dev-dependencies [[swank-clojure "1.4.0-SNAPSHOT"]])
